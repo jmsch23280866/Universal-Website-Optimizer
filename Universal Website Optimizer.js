@@ -10,7 +10,6 @@
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
-
 (function() {
     'use strict';
 
@@ -46,10 +45,7 @@
             });
         });
 
-        observer.observe(document.head, {
-            childList: true,
-            subtree: true
-        });
+        observer.observe(document.head, { childList: true, subtree: true });
     }
 
     // Lazy load 圖片
@@ -86,10 +82,11 @@
         document.querySelectorAll('iframe[src*="youtube.com/embed/"]').forEach(iframe => {
             const videoId = new URL(iframe.src).pathname.split('/').pop();
             const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
             const facade = document.createElement('div');
             facade.style.position = 'relative';
-            facade.style.width = '100%';
-            facade.style.height = '0';
+            facade.style.width = iframe.style.width || iframe.width || '100%';
+            facade.style.height = iframe.style.height || iframe.height || '0';
             facade.style.paddingBottom = '56.25%';
             facade.style.background = `url(${thumbnailUrl}) center center / cover no-repeat`;
             facade.style.cursor = 'pointer';
@@ -100,27 +97,20 @@
             playButton.style.top = '50%';
             playButton.style.left = '50%';
             playButton.style.transform = 'translate(-50%, -50%)';
-            playButton.style.width = '60px';
-            playButton.style.height = '60px';
-            playButton.style.background = 'rgba(0, 0, 0, 0.5)';
-            playButton.style.borderRadius = '50%';
+            playButton.style.width = '50px';
+            playButton.style.height = '50px';
             playButton.style.display = 'flex';
             playButton.style.alignItems = 'center';
             playButton.style.justifyContent = 'center';
-            playButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 5V19L19 12L8 5Z" fill="white"/>
-            </svg>`;
+            playButton.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M8 5v14l11-7z"></path></svg>';
             facade.appendChild(playButton);
 
             facade.addEventListener('click', () => {
                 const iframe = document.createElement('iframe');
                 iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-                iframe.style.position = 'absolute';
-                iframe.style.top = '0';
-                iframe.style.left = '0';
                 iframe.style.width = '100%';
                 iframe.style.height = '100%';
-                iframe.frameBorder = '0';
+                iframe.style.border = 'none';
                 iframe.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
                 facade.replaceWith(iframe);
             });
@@ -138,31 +128,13 @@
         });
     }
 
-    // 在主要內容載入完畢後再載入第三方程式碼
-    function deferThirdPartyScripts() {
-        const thirdPartyScripts = [];
-        document.querySelectorAll('script').forEach(script => {
-            if (blockList.every(regex => !regex.test(script.src))) {
-                thirdPartyScripts.push(script);
-                script.remove();
-            }
-        });
-
-        window.addEventListener('load', () => {
-            thirdPartyScripts.forEach(script => {
-                document.body.appendChild(script);
-            });
-        });
-    }
-
-    // DOMContentLoaded 事件觸發後執行優化腳本
+    // DOMContentLoaded事件觸發後執行優化腳本
     document.addEventListener('DOMContentLoaded', function() {
         interceptRequests();
         enableLazyLoad();
         avoidDocumentWrite();
         replaceYouTubeEmbeds();
         deferNonCriticalJS();
-        deferThirdPartyScripts();
     });
 
     // 監控動態加載的廣告和遙測腳本
@@ -184,7 +156,8 @@
         });
     });
 
-    observer.observe(document.body, {
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
         childList: true,
         subtree: true
     });
