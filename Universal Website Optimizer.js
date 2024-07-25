@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      0.4
+// @version      0.5
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry and ads, and defers non-critical JavaScript. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測和廣告、延遲非關鍵JavaScript載入。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -117,13 +117,10 @@
             facade.appendChild(playButton);
             facade.addEventListener('click', () => {
                 const iframe = document.createElement('iframe');
+                iframe.width = "854";
+                iframe.height = "480";
                 iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
-                iframe.style.position = 'absolute';
-                iframe.style.top = '0';
-                iframe.style.left = '0';
-                iframe.style.width = '100%';
-                iframe.style.height = '100%';
-                iframe.frameBorder = '0';
+                iframe.frameBorder = "0";
                 iframe.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture';
                 iframe.allowFullscreen = true;
                 facade.replaceWith(iframe);
