@@ -98,7 +98,7 @@
             playButton.style.left = '50%';
             playButton.style.transform = 'translate(-50%, -50%)';
             playButton.style.width = '68px';
-            playButton.style.height = '48px';
+            playButton.style.height = '68px';
             playButton.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
             playButton.style.borderRadius = '50%';
             playButton.style.display = 'flex';
