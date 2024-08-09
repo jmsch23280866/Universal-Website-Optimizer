@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      0.9
+// @version      0.10
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -14,18 +14,28 @@
 (function() {
     'use strict';
 
-    // 在 DOMContentLoaded 事件後執行 Lazy Load
+    // 初始化 Lazy Load，但排除預載的內容
     function initLazyLoad() {
+        const preloadSources = new Set();
+
+        // 收集所有 preload 標籤的 href 或 src
+        document.querySelectorAll('link[rel="preload"], script[rel="preload"], img[rel="preload"], iframe[rel="preload"]').forEach(preloadElement => {
+            if (preloadElement.href) {
+                preloadSources.add(preloadElement.href);
+            } else if (preloadElement.src) {
+                preloadSources.add(preloadElement.src);
+            }
+        });
+
         const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const target = entry.target;
-                    if (target.dataset.src) {
+                    if (target.dataset.src && !preloadSources.has(target.dataset.src)) {
                         target.src = target.dataset.src;
                         if (target.tagName === 'IFRAME' && target.src.includes('youtube.com/embed/')) {
                             target.src = target.src.replace('youtube.com/embed/', 'youtube-nocookie.com/embed/');
                         }
-                        console.log(`Lazy loaded: ${target.src}`);
                     }
                     observer.unobserve(target);
                 }
@@ -33,7 +43,9 @@
         });
 
         document.querySelectorAll('img[data-src], iframe[data-src]').forEach(element => {
-            lazyLoadObserver.observe(element);
+            if (!preloadSources.has(element.dataset.src)) {
+                lazyLoadObserver.observe(element);
+            }
         });
     }
 
@@ -46,9 +58,8 @@
         }
     }
 
-    // 通用優化邏輯
-    function optimizedExecution() {
-        // 定義需要攔截的資源列表
+    // 移除不必要的 script 和 stylesheet
+    function removeUnnecessaryScriptsAndStyles() {
         const blockList = [
             /google-analytics\.com/, /analytics\.js/, /gtag\/js/, /doubleclick\.net/,
             /connect\.facebook\.net/, /adsbygoogle\.js/, /googlesyndication\.com/,
@@ -57,82 +68,57 @@
             /pubads\.g\.doubleclick\.net/, /securepubads\.g\.doubleclick\.net/
         ];
 
-        // 攔截不必要的資源請求
-        function interceptRequests() {
-            const originalOpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function(method, url) {
-                if (blockList.some(regex => regex.test(url))) {
-                    console.log(`Blocked request to: ${url}`);
-                    return;
-                }
-                originalOpen.apply(this, arguments);
-            };
-
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach(mutation => {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.tagName === 'SCRIPT' && node.src && blockList.some(regex => regex.test(node.src))) {
-                            console.log(`Removed script: ${node.src}`);
-                            node.remove();
-                        } else if (node.tagName === 'LINK' && node.rel === 'stylesheet' && blockList.some(regex => regex.test(node.href))) {
-                            console.log(`Removed stylesheet: ${node.href}`);
-                            node.remove();
-                        }
-                    });
-                });
-            });
-
-            observer.observe(document.head, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-        // 避免使用 document.write()
-        function avoidDocumentWrite() {
-            const originalDocumentWrite = document.write;
-            document.write = function(content) {
-                console.log('document.write() was called, content: ', content);
-                originalDocumentWrite.apply(document, arguments);
-            };
-        }
-
-        // 刪除無用元素的綜合函數
-        function removeUnnecessaryElements() {
-            // 刪除無用的meta和link標籤
-            document.querySelectorAll('meta[name], meta[property], link[rel="apple-touch-icon"], meta[name="apple-itunes-app"], link[rel="canonical"]').forEach(element => {
-                console.log(`Removed tag: ${element.outerHTML}`);
+        // 移除不必要的 script 和 stylesheet
+        document.querySelectorAll('script[src], link[rel="stylesheet"]').forEach(element => {
+            const srcOrHref = element.src || element.href;
+            if (blockList.some(regex => regex.test(srcOrHref))) {
                 element.remove();
-            });
+            }
+        });
+    }
 
-            // 刪除所有無障礙描述的alt屬性
-            document.querySelectorAll('img[alt], area[alt]').forEach(element => {
-                console.log(`Removed alt text: ${element.alt}`);
-                element.removeAttribute('alt');
-            });
+    // 避免使用 document.write()
+    function avoidDocumentWrite() {
+        const originalDocumentWrite = document.write;
+        document.write = function(content) {
+            console.error('document.write() was called, content: ', content); // 只記錄錯誤
+            originalDocumentWrite.apply(document, arguments);
+        };
+    }
 
-            // 刪除SEO相關標籤
-            const seoMetaNames = [
-                'description', 'keywords', 'robots', 'googlebot', 'bingbot', 'yandex-verification',
-                'google-site-verification', 'msvalidate.01', 'viewport', 'format-detection'
-            ];
+    // 刪除無用元素的綜合函數
+    function removeUnnecessaryElements() {
+        // 刪除無用的meta和link標籤
+        document.querySelectorAll('meta[name], meta[property], link[rel="apple-touch-icon"], meta[name="apple-itunes-app"], link[rel="canonical"]').forEach(element => {
+            element.remove();
+        });
 
-            document.querySelectorAll('meta').forEach(meta => {
-                if (seoMetaNames.includes(meta.getAttribute('name'))) {
-                    console.log(`Removed SEO meta tag: ${meta.outerHTML}`);
-                    meta.remove();
-                }
-            });
+        // 刪除所有無障礙描述的alt屬性
+        document.querySelectorAll('img[alt], area[alt]').forEach(element => {
+            element.removeAttribute('alt');
+        });
 
-            // 移除 <noscript> 標籤內容
-            document.querySelectorAll('noscript').forEach(noscript => {
-                console.log('Removed <noscript> content');
-                noscript.remove();
-            });
-        }
+        // 刪除SEO相關標籤
+        const seoMetaNames = [
+            'description', 'keywords', 'robots', 'googlebot', 'bingbot', 'yandex-verification',
+            'google-site-verification', 'msvalidate.01', 'viewport', 'format-detection'
+        ];
 
-        // 綜合執行優化邏輯
-        interceptRequests();
+        document.querySelectorAll('meta').forEach(meta => {
+            if (seoMetaNames.includes(meta.getAttribute('name'))) {
+                meta.remove();
+            }
+        });
+
+        // 移除 <noscript> 標籤內容
+        document.querySelectorAll('noscript').forEach(noscript => {
+            noscript.remove();
+        });
+    }
+
+    // 綜合執行優化邏輯
+    function optimizedExecution() {
+        removeUnnecessaryScriptsAndStyles();
         avoidDocumentWrite();
         removeUnnecessaryElements();
     }
