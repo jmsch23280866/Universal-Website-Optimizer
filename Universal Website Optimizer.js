@@ -3,8 +3,8 @@
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
 // @version      0.9
-// @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry and ads, and defers non-critical JavaScript. (Script assisted by ChatGPT)
-// @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測和廣告、延遲非關鍵JavaScript載入。（此腳本由ChatGPT協助撰寫）
+// @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
+// @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
 // @license      MIT
 // @match        *://*/*
