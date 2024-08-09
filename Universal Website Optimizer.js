@@ -8,7 +8,6 @@
 // @author       特務E04
 // @license      MIT
 // @match        *://*/*
-// @exclude      *://*.googlevideo.com/*
 // @grant        none
 // ==/UserScript==
 
