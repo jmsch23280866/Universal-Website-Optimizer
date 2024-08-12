@@ -2,9 +2,9 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      0.7
-// @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry, and defers non-critical JavaScript. (Script assisted by ChatGPT)
-// @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測、延遲非關鍵JavaScript載入。（此腳本由ChatGPT協助撰寫）
+// @version      0.7.1
+// @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
+// @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
 // @license      MIT
 // @match        *://*/*
@@ -108,18 +108,7 @@
             console.log('Blocked document.write():', content);
         };
     }
-
-    // 延遲載入非關鍵 JavaScript
-    function deferNonCriticalJS() {
-        document.querySelectorAll('script').forEach(script => {
-            if (!script.hasAttribute('defer') && !script.hasAttribute('async') && 
-                !/local\.adguard\.org/.test(script.src) && !/localhost\.com/.test(script.src) &&
-                !script.src.startsWith('chrome-extension://')) {
-                script.setAttribute('defer', 'defer');
-            }
-        });
-    }
-
+	
     // 清除 <noscript> 內容
     function removeNoscriptContent() {
         document.querySelectorAll('noscript').forEach(noscript => {
@@ -133,7 +122,6 @@
         enableLazyLoad();
         enableIframeLazyLoad();
         avoidDocumentWrite();
-        deferNonCriticalJS();
         removeNoscriptContent();
     }
 
