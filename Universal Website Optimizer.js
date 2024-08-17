@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      1.0
+// @version      1.2
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -42,23 +42,78 @@
         }).observe(document.head, { childList: true, subtree: true });
     };
 
-    // 檢查瀏覽器是否支持原生的懶加載
-    const supportsNativeLazyLoad = 'loading' in HTMLImageElement.prototype;
+    // 更通用化的延遲加載功能
+    const enhancedLazyLoad = () => {
+        const images = document.querySelectorAll('img');
+        const options = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
 
-    // 為圖片和 iframe 啟用懶加載
-    const enableLazyLoad = (selector, attribute = 'src') => {
-        const elements = document.querySelectorAll(selector);
-        if (elements.length === 0) return; // 如果沒有找到元素，直接返回
+        const loadImage = (image) => {
+            const dataSrc = image.getAttribute('data-src') || image.getAttribute('data-lazy') || image.getAttribute('data-original') || image.src;
+            if (dataSrc) {
+                image.src = dataSrc;
+                image.removeAttribute('data-src');
+                image.removeAttribute('data-lazy');
+                image.removeAttribute('data-original');
+            }
 
-        elements.forEach(el => {
-            if (supportsNativeLazyLoad) {
-                el.loading = 'lazy';
-            } else {
-                el.classList.add('lazyload');
+            const dataSrcset = image.getAttribute('data-srcset');
+            if (dataSrcset) {
+                image.srcset = dataSrcset;
+                image.removeAttribute('data-srcset');
             }
-            if (el.tagName === 'IFRAME' && el[attribute]?.includes('youtube.com/embed/')) {
-                el[attribute] = el[attribute].replace('youtube.com/embed/', 'youtube-nocookie.com/embed/');
+        };
+
+        const handleIntersection = (entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    loadImage(entry.target);
+                    observer.unobserve(entry.target);
+                }
+            });
+        };
+
+        const observer = new IntersectionObserver(handleIntersection, options);
+
+        images.forEach(img => {
+            observer.observe(img);
+        });
+    };
+
+    // 圖片格式轉換（如果瀏覽器支持 WebP）
+    const convertToWebP = () => {
+        if (!self.createImageBitmap) return; // 檢查瀏覽器是否支持 createImageBitmap
+
+        const images = document.querySelectorAll('img');
+        images.forEach(img => {
+            if (img.src.match(/\.(png|jpg|jpeg)$/i)) {
+                fetch(img.src)
+                    .then(response => response.blob())
+                    .then(blob => createImageBitmap(blob))
+                    .then(bitmap => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = bitmap.width;
+                        canvas.height = bitmap.height;
+                        canvas.getContext('2d').drawImage(bitmap, 0, 0);
+                        img.src = canvas.toDataURL('image/webp');
+                    })
+                    .catch(err => console.error('Image conversion failed:', err));
             }
+        });
+    };
+
+    // 預加載關鍵圖片
+    const preloadCriticalImages = () => {
+        const criticalImages = document.querySelectorAll('img[data-critical]');
+        criticalImages.forEach(img => {
+            const preloadLink = document.createElement('link');
+            preloadLink.rel = 'preload';
+            preloadLink.as = 'image';
+            preloadLink.href = img.src;
+            document.head.appendChild(preloadLink);
         });
     };
 
@@ -83,22 +138,33 @@
         });
     };
 
+    // YouTube 播放器隱私模式
+    const enableYouTubePrivacyMode = () => {
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+            if (iframe.src.includes('youtube.com/embed/')) {
+                iframe.src = iframe.src.replace('youtube.com/embed/', 'youtube-nocookie.com/embed/');
+            }
+        });
+    };
+
     // 立即執行的優化
     const immediateOptimizations = () => {
         interceptRequests();
         replaceDocumentWrite();
+        preloadCriticalImages();
     };
 
     // DOM 內容加載完成後執行的優化
     const domContentLoadedOptimizations = () => {
-        enableLazyLoad('img');
-        enableLazyLoad('iframe', 'src');
-        removeAccessibilityAttributes(); // 在這裡移除圖片的 alt 屬性
+        enhancedLazyLoad();
+        removeAccessibilityAttributes();
+        enableYouTubePrivacyMode();
     };
 
     // 頁面完全加載後執行的優化
     const windowLoadOptimizations = () => {
-        // 沒有其他延遲優化的功能
+        convertToWebP();
     };
 
     // 執行立即優化
