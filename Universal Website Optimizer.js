@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      2.2
+// @version      2.3
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -172,12 +172,47 @@
         };
     };
 
-    // 移除無障礙屬性
-    const removeAccessibilityAttributes = () => {
-        const attributes = ['aria-label', 'aria-describedby', 'aria-details', 'alt'];
-        const selector = attributes.map(attr => `[${attr}]`).join(',');
+    // 清理 HTML 元素（移除無障礙屬性和指定的 META 標籤）
+    const cleanupHTMLElements = () => {
+        // 移除無障礙屬性
+        const accessibilityAttributes = ['aria-label', 'aria-describedby', 'aria-details', 'alt'];
+        const selector = accessibilityAttributes.map(attr => `[${attr}]`).join(',');
         document.querySelectorAll(selector).forEach(el => {
-            attributes.forEach(attr => el.removeAttribute(attr));
+            accessibilityAttributes.forEach(attr => el.removeAttribute(attr));
+        });
+
+        // 定義需要移除的 META 標籤黑名單
+        const metaTagBlacklist = [
+            'keywords', 'description',
+            'author', 'generator',
+            'application-name',
+            'msapplication-TileColor', 'msapplication-TileImage', 'msapplication-config',
+            'theme-color',
+            'robots', 'googlebot',
+            'apple-itunes-app', 'apple-mobile-web-app-title',  //Apple 應用程式
+            'og:', 'og:description', 'og:title',  // Open Graph 協議相關標籤
+            'twitter:', // Twitter 卡片相關標籤
+            'fb:', // Facebook 相關標籤
+        ];
+
+        // 移除黑名單中的 META 標籤
+        document.querySelectorAll('meta').forEach(meta => {
+            const name = meta.getAttribute('name');
+            const property = meta.getAttribute('property');
+            const httpEquiv = meta.getAttribute('http-equiv');
+
+            if (name && metaTagBlacklist.some(blacklisted => name.toLowerCase().startsWith(blacklisted))) {
+                meta.remove();
+            } else if (property && metaTagBlacklist.some(blacklisted => property.toLowerCase().startsWith(blacklisted))) {
+                meta.remove();
+            } else if (httpEquiv && metaTagBlacklist.some(blacklisted => httpEquiv.toLowerCase().startsWith(blacklisted))) {
+                meta.remove();
+            }
+        });
+        
+        // 移除所有 <noscript> 段落
+        document.querySelectorAll('noscript').forEach(noscript => {
+            noscript.remove();
         });
     };
 
@@ -205,7 +240,7 @@
     const domContentLoadedOptimizations = () => {
         try {
             enhancedLazyLoad();
-            removeAccessibilityAttributes();
+            cleanupHTMLElements();
             enableYouTubePrivacyMode();
         } catch (error) {
             logError('DOM 內容加載優化過程中發生錯誤:', error);
