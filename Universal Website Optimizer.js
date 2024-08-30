@@ -172,7 +172,7 @@
         };
     };
 
-    // 清理 HTML 元素（移除無障礙屬性和指定的 META 標籤）
+    // 清理 HTML 元素
     const cleanupHTMLElements = () => {
         // 移除無障礙屬性
 		const accessibilityAttributes = ['aria-label', 'aria-describedby', 'aria-details', 'alt'];
@@ -181,7 +181,7 @@
 			accessibilityAttributes.forEach(attr => el.removeAttribute(attr));
 		});
 	
-        // 定義需要移除的 META 標籤黑名單
+        // 定義需要移除的 <meta> 標籤黑名單
         const metaTagBlacklist = [
             'keywords', 'description', 'author', 'generator',
             'robots', 'googlebot',
@@ -189,14 +189,15 @@
             'og:',  //Open Graph 協議相關標籤
             'twitter:', //Twitter 卡片相關標籤
             'fb:', //Facebook 相關標籤
+			'juicyads-site-verification', 
         ];
 
-		// 定義需要移除的 SCRIPT 標籤黑名單
+		// 定義需要移除的 <script> 標籤黑名單
 		const scriptBlacklist = [
 			'google-analytics', 'googletagmanager', 'adsbygoogle', 'doubleclick.net'
 		];
 		
-	    // 移除黑名單中的 META 標籤
+	    // 移除黑名單中的 <meta> 標籤
 		document.querySelectorAll('meta').forEach(meta => {
 			const name = meta.getAttribute('name');
 			const property = meta.getAttribute('property');
@@ -211,7 +212,7 @@
 			}
 		});
 
-		// 移除黑名單中的 SCRIPT 標籤
+		// 移除黑名單中的 <script> 標籤
 		document.querySelectorAll('script').forEach(script => {
 			const src = script.getAttribute('src');
 			if (src && scriptBlacklist.some(blacklisted => src.includes(blacklisted))) {
