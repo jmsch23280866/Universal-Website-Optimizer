@@ -184,12 +184,13 @@
         // 定義需要移除的 <meta> 標籤黑名單
         const metaTagBlacklist = [
             'keywords', 'description', 'author', 'generator',
-            'robots', 'googlebot',
+            'robots', 'googlebot', 'revisit-after',
             'apple-itunes-app', 'apple-mobile-web-app',  //Apple 應用程式
             'og:',  //Open Graph 協議相關標籤
             'twitter:', //Twitter 卡片相關標籤
             'fb:', //Facebook 相關標籤
-			'juicyads-site-verification', 
+			'juicyads-site-verification', 'exoclick-site-verification', 'trafficjunky-site-verification', //垃圾廣告
+			'ero_verify', 'linkbuxverifycode', //垃圾廣告
         ];
 
 		// 定義需要移除的 <script> 標籤黑名單
