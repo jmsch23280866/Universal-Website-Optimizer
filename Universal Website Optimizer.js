@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      2.4
+// @version      2.5
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -221,9 +221,14 @@
 			}
 		});
 
-		// 移除所有的 <noscript> 標籤
+		// 移除 <noscript> 標籤
 		document.querySelectorAll('noscript').forEach(noscript => noscript.remove());
+	
+		// 移除 <p>&nbsp; 標籤
+		document.querySelectorAll('p').forEach(p => p.innerHTML.trim() === '&nbsp;' && p.remove());
+
 	};
+	
 	
     // 啟用 YouTube 隱私模式
     const enableYouTubePrivacyMode = () => {
