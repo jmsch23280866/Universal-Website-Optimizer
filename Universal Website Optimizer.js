@@ -226,7 +226,6 @@
 	
 		// 移除 <p>&nbsp; 標籤
 		document.querySelectorAll('p').forEach(p => p.innerHTML.trim() === '&nbsp;' && p.remove());
-
 	};
 	
 	
