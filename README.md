@@ -1,2 +1,5 @@
 # Universal-Website-Optimizer
-加速網站載入速度，減少CPU和RAM使用，禁用遙測
+Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
+
+Also recommend watching the following video to enhance the performance of your browser.
+[![Watch the video](https://img.youtube.com/vi/-MdTCNWgPeY/0.jpg)](https://www.youtube.com/watch?v=-MdTCNWgPeY)
