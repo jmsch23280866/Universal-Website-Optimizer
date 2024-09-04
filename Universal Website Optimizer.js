@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      2.5
+// @version      2.6
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -24,10 +24,7 @@
     // 需要阻擋的資源列表
     const blockList = [
         'google\\.analytics\\.com', 'analytics\\.js', 'gtag\\/js',
-        'doubleclick\\.net', 'adsbygoogle\\.js', 'googlesyndication\\.com',
-        'googletagmanager\\.com', 'facebook\\.net', 'fbevents\\.js',
-        'scorecardresearch\\.com', 'quantserve\\.com', 'amazon-adsystem\\.com',
-        'adnxs\\.com', 'criteo\\.net', 'outbrain\\.com', 'taboola\\.com'
+        'doubleclick\\.net', 'adsbygoogle\\.js', 'googlesyndication\\.com', 'googletagmanager\\.com',
     ].map(pattern => new RegExp(pattern));
 
     // 防抖函數
@@ -82,46 +79,41 @@
 
     // 增強的延遲加載函數
     const enhancedLazyLoad = () => {
-        const lazyLoadAttributes = ['data-src', 'data-lazy', 'data-original'];
-        const options = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
+        const lazyLoadElements = (selector, loadingAttribute = 'src') => {
+            const elements = document.querySelectorAll(selector);
+            if ('loading' in HTMLImageElement.prototype) {
+                elements.forEach(el => {
+                    if (!el.hasAttribute('loading')) {
+                        el.setAttribute('loading', 'lazy');
+                    }
+                    // 如果有data-src，則將其設置為src
+                    if (el.dataset.src) {
+                        el[loadingAttribute] = el.dataset.src;
+                    }
+                });
+            } else {
+                // 使用 IntersectionObserver 作為後備方案
+                const observer = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const el = entry.target;
+                            if (el.dataset.src) {
+                                el[loadingAttribute] = el.dataset.src;
+                            }
+                            observer.unobserve(el);
+                        }
+                    });
+                });
+
+                elements.forEach(el => observer.observe(el));
+            }
         };
 
-        const loadImage = (image) => {
-            for (const attr of lazyLoadAttributes) {
-                const dataSrc = image.getAttribute(attr);
-                if (dataSrc) {
-                    image.src = dataSrc;
-                    image.removeAttribute(attr);
-                    break;
-                }
-            }
+        // 延遲加載圖片
+        lazyLoadElements('img');
 
-            const dataSrcset = image.getAttribute('data-srcset');
-            if (dataSrcset) {
-                image.srcset = dataSrcset;
-                image.removeAttribute('data-srcset');
-            }
-        };
-
-        const handleIntersection = (entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    loadImage(entry.target);
-                    observer.unobserve(entry.target);
-                }
-            });
-        };
-
-        const observer = new IntersectionObserver(handleIntersection, options);
-
-        document.querySelectorAll('img').forEach(img => {
-            if (lazyLoadAttributes.some(attr => img.hasAttribute(attr)) || img.hasAttribute('data-srcset')) {
-                observer.observe(img);
-            }
-        });
+        // 延遲加載 iframe
+        lazyLoadElements('iframe', 'src');
     };
 
     // 預加載關鍵資源
@@ -153,21 +145,23 @@
 
     // 替換 document.write
     const replaceDocumentWrite = () => {
-        const handleContentInsertion = (content) => {
-            try {
-                const range = document.createRange();
-                const fragment = range.createContextualFragment(content);
-                document.body.appendChild(fragment);
-            } catch (err) {
-                logError('內容插入失敗:', err);
-            }
-        };
+        const originalWrite = document.write;
 
         document.write = document.writeln = (content) => {
-            if (typeof content === 'string') {
-                handleContentInsertion(content);
-            } else {
-                logError('內容必須是字符串');
+            if (typeof content !== 'string') return logError('內容必須是字符串');
+            try {
+                if (document.body) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = content;
+                    document.body.appendChild(tempDiv);
+                } else {
+                    // 如果body不存在，使用原始方法
+                    originalWrite.call(document, content);
+                }
+            } catch (err) {
+                logError('內容插入失敗:', err);
+                // 回退到原始的document.write
+                originalWrite.call(document, content);
             }
         };
     };
@@ -260,10 +254,10 @@
         }
     };
 
-    // 執行立即優化
+    // 立即執行優化
     immediateOptimizations();
 
-    // 在 DOM 內容加載完成後執行優化
+    // 在 DOM 內容加載完成後執行其他優化
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', domContentLoadedOptimizations);
     } else {
