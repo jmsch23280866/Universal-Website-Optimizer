@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      2.6
+// @version      2.7
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -40,6 +40,48 @@
         };
     };
 
+    // 本地快取
+    const localCache = new Map();
+
+    // 請求佇列
+    const requestQueue = [];
+    let activeRequests = 0;
+    const MAX_CONCURRENT_REQUESTS = 5; // 調整此數值以改變同時請求數量，較高的數值可能會提高網路速度測試的準確性，但也可能增加記憶體占用。
+
+    const processQueue = () => {
+        if (requestQueue.length === 0 || activeRequests >= MAX_CONCURRENT_REQUESTS) {
+            return;
+        }
+
+        const { url, resolve, reject } = requestQueue.shift();
+        activeRequests++;
+
+        fetch(url)
+            .then(response => response.text())
+            .then(data => {
+                localCache.set(url, data);
+                resolve(data);
+            })
+            .catch(reject)
+            .finally(() => {
+                activeRequests--;
+                processQueue();
+            });
+    };
+
+    const cachedFetch = (url) => {
+        if (localCache.has(url)) {
+            // 如果本地快取中已有該 URL 的內容，直接返回快取的內容
+            return Promise.resolve(localCache.get(url));
+        }
+
+        // 如果本地快取中沒有該 URL 的內容，將請求加入佇列並處理
+        return new Promise((resolve, reject) => {
+            requestQueue.push({ url, resolve, reject });
+            processQueue();
+        });
+    };
+
     // 攔截請求函數
     const interceptRequests = () => {
         // 攔截 XMLHttpRequest
@@ -51,12 +93,17 @@
             originalOpen.call(this, method, url, ...args);
         };
 
-        // 攔截 Fetch API
+        // 攔截 Fetch API 並使用快取
         const originalFetch = window.fetch;
         window.fetch = function(input, init) {
             if (typeof input === 'string' && blockList.some(regex => regex.test(input))) {
                 return Promise.reject(new Error('Request blocked by Userscript'));
             }
+
+            if (typeof input === 'string') {
+                return cachedFetch(input);
+            }
+
             return originalFetch.call(this, input, init);
         };
 
