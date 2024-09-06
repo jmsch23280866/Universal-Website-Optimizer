@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      2.7
+// @version      2.7.6
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -19,6 +19,8 @@
     // 錯誤日誌函數，只在發生錯誤時輸出到控制台
     const logError = (message, error) => {
         console.error(`[Universal Website Optimizer] ${message}`, error);
+        // 新增錯誤提示
+        alert(`Error: ${message}`);
     };
 
     // 需要阻擋的資源列表
@@ -43,30 +45,11 @@
     // 本地快取
     const localCache = new Map();
 
-    // 請求佇列
-    const requestQueue = [];
-    let activeRequests = 0;
-    const MAX_CONCURRENT_REQUESTS = 5; // 調整此數值以改變同時請求數量，較高的數值可能會提高網路速度測試的準確性，但也可能增加記憶體占用。
-
-    const processQueue = () => {
-        if (requestQueue.length === 0 || activeRequests >= MAX_CONCURRENT_REQUESTS) {
-            return;
-        }
-
-        const { url, resolve, reject } = requestQueue.shift();
-        activeRequests++;
-
-        fetch(url)
-            .then(response => response.text())
-            .then(data => {
-                localCache.set(url, data);
-                resolve(data);
-            })
-            .catch(reject)
-            .finally(() => {
-                activeRequests--;
-                processQueue();
-            });
+    // 檢查是否為可快取的資源
+    const isCacheable = (url) => {
+        const img = new Image();
+        img.src = url;
+        return img.complete || /\.(css|woff|woff2|ttf|eot)$/i.test(url);
     };
 
     const cachedFetch = (url) => {
@@ -76,10 +59,12 @@
         }
 
         // 如果本地快取中沒有該 URL 的內容，將請求加入佇列並處理
-        return new Promise((resolve, reject) => {
-            requestQueue.push({ url, resolve, reject });
-            processQueue();
-        });
+        return fetch(url)
+            .then(response => response.text())
+            .then(data => {
+                localCache.set(url, data);
+                return data;
+            });
     };
 
     // 攔截請求函數
@@ -93,14 +78,14 @@
             originalOpen.call(this, method, url, ...args);
         };
 
-        // 攔截 Fetch API 並使用快取
+        // 攔截 Fetch API
         const originalFetch = window.fetch;
         window.fetch = function(input, init) {
             if (typeof input === 'string' && blockList.some(regex => regex.test(input))) {
                 return Promise.reject(new Error('Request blocked by Userscript'));
             }
 
-            if (typeof input === 'string') {
+            if (typeof input === 'string' && isCacheable(input)) {
                 return cachedFetch(input);
             }
 
@@ -216,12 +201,12 @@
     // 清理 HTML 元素
     const cleanupHTMLElements = () => {
         // 移除無障礙屬性
-		const accessibilityAttributes = ['aria-label', 'aria-describedby', 'aria-details', 'alt'];
-		const selector = accessibilityAttributes.map(attr => `[${attr}]`).join(',');
-		document.querySelectorAll(selector).forEach(el => {
-			accessibilityAttributes.forEach(attr => el.removeAttribute(attr));
-		});
-	
+        const accessibilityAttributes = ['aria-label', 'aria-describedby', 'aria-details', 'alt'];
+        const selector = accessibilityAttributes.map(attr => `[${attr}]`).join(',');
+        document.querySelectorAll(selector).forEach(el => {
+            accessibilityAttributes.forEach(attr => el.removeAttribute(attr));
+        });
+
         // 定義需要移除的 <meta> 標籤黑名單
         const metaTagBlacklist = [
             'keywords', 'description', 'author', 'generator',
@@ -230,46 +215,45 @@
             'og:',  //Open Graph 協議相關標籤
             'twitter:', //Twitter 卡片相關標籤
             'fb:', //Facebook 相關標籤
-			'juicyads-site-verification', 'exoclick-site-verification', 'trafficjunky-site-verification', //垃圾廣告
-			'ero_verify', 'linkbuxverifycode', //垃圾廣告
+            'juicyads-site-verification', 'exoclick-site-verification', 'trafficjunky-site-verification', //垃圾廣告
+            'ero_verify', 'linkbuxverifycode', //垃圾廣告
         ];
 
-		// 定義需要移除的 <script> 標籤黑名單
-		const scriptBlacklist = [
-			'google-analytics', 'googletagmanager', 'adsbygoogle', 'doubleclick.net'
-		];
-		
-	    // 移除黑名單中的 <meta> 標籤
-		document.querySelectorAll('meta').forEach(meta => {
-			const name = meta.getAttribute('name');
-			const property = meta.getAttribute('property');
-			const httpEquiv = meta.getAttribute('http-equiv');
+        // 定義需要移除的 <script> 標籤黑名單
+        const scriptBlacklist = [
+            'google-analytics', 'googletagmanager', 'adsbygoogle', 'doubleclick.net'
+        ];
 
-			if (name && metaTagBlacklist.some(blacklisted => name.toLowerCase().startsWith(blacklisted))) {
-				meta.remove();
-			} else if (property && metaTagBlacklist.some(blacklisted => property.toLowerCase().startsWith(blacklisted))) {
-				meta.remove();
-			} else if (httpEquiv && metaTagBlacklist.some(blacklisted => httpEquiv.toLowerCase().startsWith(blacklisted))) {
-				meta.remove();
-			}
-		});
+        // 移除黑名單中的 <meta> 標籤
+        document.querySelectorAll('meta').forEach(meta => {
+            const name = meta.getAttribute('name');
+            const property = meta.getAttribute('property');
+            const httpEquiv = meta.getAttribute('http-equiv');
 
-		// 移除黑名單中的 <script> 標籤
-		document.querySelectorAll('script').forEach(script => {
-			const src = script.getAttribute('src');
-			if (src && scriptBlacklist.some(blacklisted => src.includes(blacklisted))) {
-				script.remove();
-			}
-		});
+            if (name && metaTagBlacklist.some(blacklisted => name.toLowerCase().startsWith(blacklisted))) {
+                meta.remove();
+            } else if (property && metaTagBlacklist.some(blacklisted => property.toLowerCase().startsWith(blacklisted))) {
+                meta.remove();
+            } else if (httpEquiv && metaTagBlacklist.some(blacklisted => httpEquiv.toLowerCase().startsWith(blacklisted))) {
+                meta.remove();
+            }
+        });
 
-		// 移除 <noscript> 標籤
-		document.querySelectorAll('noscript').forEach(noscript => noscript.remove());
-	
-		// 移除 <p>&nbsp; 標籤
-		document.querySelectorAll('p').forEach(p => p.innerHTML.trim() === '&nbsp;' && p.remove());
-	};
-	
-	
+        // 移除黑名單中的 <script> 標籤
+        document.querySelectorAll('script').forEach(script => {
+            const src = script.getAttribute('src');
+            if (src && scriptBlacklist.some(blacklisted => src.includes(blacklisted))) {
+                script.remove();
+            }
+        });
+
+        // 移除 <noscript> 標籤
+        document.querySelectorAll('noscript').forEach(noscript => noscript.remove());
+
+        // 移除 <p>&nbsp; 標籤
+        document.querySelectorAll('p').forEach(p => p.innerHTML.trim() === '&nbsp;' && p.remove());
+    };
+
     // 啟用 YouTube 隱私模式
     const enableYouTubePrivacyMode = () => {
         document.querySelectorAll('iframe').forEach(iframe => {
