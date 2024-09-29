@@ -2,7 +2,7 @@
 // @name         Universal Website Optimizer (WIP Beta Ver) / 通用網站優化工具 (實驗性)
 // @name:zh-TW   通用網站優化工具 (實驗性)
 // @namespace    https://github.com/jmsch23280866
-// @version      2.7.6
+// @version      2.7.9
 // @description  Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 // @description:zh-TW 加速網站載入速度、減少CPU和RAM使用、禁用遙測。（此腳本由ChatGPT協助撰寫）
 // @author       特務E04
@@ -15,6 +15,7 @@
 
 (() => {
     'use strict';
+
 
     // 錯誤日誌函數，只在發生錯誤時輸出到控制台
     const logError = (message, error) => {
@@ -43,27 +44,52 @@
     };
 
     // 本地快取
+    const MAX_CACHE_SIZE = 48 * 1024 * 1024; // 48MB
+    const CACHE_EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes
+
     const localCache = new Map();
+    let currentCacheSize = 0;
 
     // 檢查是否為可快取的資源
     const isCacheable = (url) => {
         const img = new Image();
         img.src = url;
-        return img.complete || /\.(css|woff|woff2|ttf|eot)$/i.test(url);
+        const fileName = url.split('/').pop();
+        const isNumericFileName = /^\d+$/.test(fileName.split('.').shift());
+        return !isNumericFileName && (img.complete || /\.(css|woff|woff2|ttf|eot|js)$/i.test(url)); // 添加對 .js 文件的檢查
     };
 
+
     const cachedFetch = (url) => {
+        const now = Date.now();
+
         if (localCache.has(url)) {
-            // 如果本地快取中已有該 URL 的內容，直接返回快取的內容
-            return Promise.resolve(localCache.get(url));
+            const { data, timestamp } = localCache.get(url);
+            if (now - timestamp < CACHE_EXPIRY_TIME) {
+                // 如果快取未過期，重置時間戳並返回快取的內容
+                localCache.set(url, { data, timestamp: now });
+                return Promise.resolve(data);
+            } else {
+                // 如果快取已過期，移除快取項目
+                localCache.delete(url);
+                currentCacheSize -= data.length;
+            }
         }
 
-        // 如果本地快取中沒有該 URL 的內容，將請求加入佇列並處理
         return fetch(url)
-            .then(response => response.text())
-            .then(data => {
-                localCache.set(url, data);
-                return data;
+            .then(response => {
+                const contentLength = response.headers.get('Content-Length');
+                if (contentLength && parseInt(contentLength) > 1048576) { // 1MB = 1048576 bytes
+                    return response.text();
+                }
+
+                return response.text().then(data => {
+                    if (currentCacheSize + data.length <= MAX_CACHE_SIZE) {
+                        localCache.set(url, { data, timestamp: now });
+                        currentCacheSize += data.length;
+                    }
+                    return data;
+                });
             });
     };
 
@@ -77,6 +103,7 @@
             }
             originalOpen.call(this, method, url, ...args);
         };
+
 
         // 攔截 Fetch API
         const originalFetch = window.fetch;
@@ -175,6 +202,7 @@
         preloadLinks.forEach(link => document.head.appendChild(link));
     };
 
+
     // 替換 document.write
     const replaceDocumentWrite = () => {
         const originalWrite = document.write;
@@ -207,6 +235,7 @@
             accessibilityAttributes.forEach(attr => el.removeAttribute(attr));
         });
 
+
         // 定義需要移除的 <meta> 標籤黑名單
         const metaTagBlacklist = [
             'keywords', 'description', 'author', 'generator',
@@ -238,6 +267,7 @@
                 meta.remove();
             }
         });
+
 
         // 移除黑名單中的 <script> 標籤
         document.querySelectorAll('script').forEach(script => {
