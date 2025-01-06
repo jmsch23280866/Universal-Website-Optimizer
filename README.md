@@ -1,4 +1,7 @@
 # Universal-Website-Optimizer
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Optimizes website loading speed, reduces CPU and RAM usage, disables telemetry. (Script assisted by ChatGPT)
 
 ## Main Features of Universal Website Optimizer
